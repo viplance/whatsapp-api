@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class AppService {
@@ -6,7 +6,11 @@ export class AppService {
     return 'WhatsApp direct message API';
   }
 
-  sendMessage() {
-    return 'Message sent';
+  sendMessage({ messanger }: { messanger: 'WhatsApp' }): string {
+    if (messanger !== 'WhatsApp') {
+      throw new NotFoundException('Invalid messanger').getResponse();
+    }
+
+    return 'Message sent to ' + messanger;
   }
 }

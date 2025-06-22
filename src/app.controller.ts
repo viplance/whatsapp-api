@@ -1,6 +1,7 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ApiExcludeEndpoint } from '@nestjs/swagger';
+import { ApiExcludeEndpoint, ApiOperation } from '@nestjs/swagger';
+import { SendMessageDto } from './dto/send-message.dto';
 
 @Controller()
 export class AppController {
@@ -12,8 +13,9 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Post()
-  sendMessage(): string {
-    return this.appService.sendMessage();
+  @Post('/send-message')
+  @ApiOperation({ summary: 'Send message' })
+  sendMessage(@Body() sendMessageDto: SendMessageDto): string {
+    return this.appService.sendMessage({ messanger: sendMessageDto.messanger });
   }
 }
