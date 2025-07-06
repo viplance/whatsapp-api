@@ -1,14 +1,7 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 const { createHash } = require('crypto');
 import puppeteer, { Browser, Page } from 'puppeteer';
-
-const demoMessage =
-  ' - This message was sent using the WhatsApp Direct Message API';
-const whatsAppURL = 'https://web.whatsapp.com';
 
 function delay(time) {
   return new Promise(function (resolve) {
@@ -47,7 +40,18 @@ const waitTillHTMLRendered = async (page, timeout = 30000) => {
 
 @Injectable()
 export class PuppeteerService {
+  private demoMessage: string;
+  private whatsAppURL: string;
   private browsers: { [key: string]: { browser: Browser; page: Page } } = {};
+
+  constructor(private configService: ConfigService) {
+    this.demoMessage = this.configService.get('DEMO_MESSAGE');
+    if (this.demoMessage === undefined)
+      this.demoMessage =
+        ' - This message was sent using the WhatsApp Direct Message API';
+    this.whatsAppURL =
+      this.configService.get('WHATSAPP_URL') || 'https://web.whatsapp.com';
+  }
 
   private async getBrowser(browserId: string): Promise<[Browser, Page]> {
     let browser: Browser;
@@ -60,7 +64,7 @@ export class PuppeteerService {
       browser = await puppeteer.launch({
         headless: false,
         userDataDir: `.sessions/${browserId}`,
-        browserURL: whatsAppURL,
+        browserURL: this.whatsAppURL,
         args: [
           '-disable-features=InfiniteSessionRestore',
           '--hide-crash-restore-bubble',
@@ -80,7 +84,7 @@ export class PuppeteerService {
         page = await browser.newPage();
       }
 
-      await page.goto(whatsAppURL, {
+      await page.goto(this.whatsAppURL, {
         waitUntil: 'networkidle0',
       });
 
@@ -138,7 +142,7 @@ export class PuppeteerService {
     await phoneInputP.click();
     await page.keyboard.type(phoneNumber, { delay: 1 });
     await page.keyboard.press('Enter', { delay: 100 });
-    await page.keyboard.type(`${text}${demoMessage}`, { delay: 1 });
+    await page.keyboard.type(`${text}${this.demoMessage}`, { delay: 1 });
     await page.keyboard.press('Enter', { delay: 100 });
 
     const myDivs = await page.$$eval('div', (divs) =>
