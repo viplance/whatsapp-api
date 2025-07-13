@@ -13,8 +13,10 @@ function delay(time) {
   });
 }
 
-function getTimeHash() {
-  return createHash('sha256').update(Date.now().toString()).digest('hex');
+function getTimeHash(salt = ''): string {
+  return createHash('sha256')
+    .update(salt + Date.now().toString())
+    .digest('hex');
 }
 
 const waitTillHTMLRendered = async (page, timeout = 30000) => {
@@ -103,7 +105,7 @@ export class PuppeteerService {
   }
 
   async getWhatsAppCode(): Promise<{ apiKey: string; qrCode: string }> {
-    const apiKey = getTimeHash();
+    const apiKey = getTimeHash(this.configService.get('SALT'));
     const [browser, page] = await this.getBrowser(apiKey);
 
     const canvas = await page.waitForSelector('canvas');
