@@ -11,13 +11,13 @@ export class AppService {
 
   async sendMessage({
     messanger,
-    browserId,
-    phoneNumber,
+    apiKey,
+    contact,
     text,
   }: {
     messanger: Messanger;
-    browserId: string;
-    phoneNumber: string;
+    apiKey: string;
+    contact: string;
     text: string;
   }): Promise<string> {
     if (messanger !== 'WhatsApp') {
@@ -25,13 +25,13 @@ export class AppService {
     }
 
     return this.puppeteerService.sendWhatsAppMessage({
-      browserId,
-      phoneNumber,
+      apiKey,
+      contact,
       text,
     });
   }
 
-  async getWhatsAppCode(): Promise<{ browserId: string; qrCode: string }> {
+  async getWhatsAppCode(): Promise<{ apiKey: string; qrCode: string }> {
     return this.puppeteerService.getWhatsAppCode();
   }
 }

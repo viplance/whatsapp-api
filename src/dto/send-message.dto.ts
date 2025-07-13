@@ -11,12 +11,12 @@ export class SendMessageDto {
   @ApiProperty({ example: '3685484b29a04a77a7253406db8d9e38' })
   @IsNotEmpty()
   @IsString()
-  browserId: string;
+  apiKey: string;
 
   @ApiProperty({ example: '995146876518' })
   @IsNotEmpty()
   @IsString()
-  phoneNumber: string;
+  contact: string;
 
   @ApiProperty({ example: 'YourMessageText' })
   @IsNotEmpty()

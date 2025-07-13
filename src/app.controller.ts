@@ -18,15 +18,15 @@ export class AppController {
   sendMessage(@Body() sendMessageDto: SendMessageDto): Promise<string> {
     return this.appService.sendMessage({
       messanger: sendMessageDto.messanger,
-      browserId: sendMessageDto.browserId,
-      phoneNumber: sendMessageDto.phoneNumber,
+      apiKey: sendMessageDto.apiKey,
+      contact: sendMessageDto.contact,
       text: sendMessageDto.text,
     });
   }
 
   @Get('/get-qr-code')
   @ApiOperation({ summary: 'Get WhatsApp QR code' })
-  getQrCode(): Promise<{ browserId: string; qrCode: string }> {
+  getQrCode(): Promise<{ apiKey: string; qrCode: string }> {
     return this.appService.getWhatsAppCode();
   }
 }

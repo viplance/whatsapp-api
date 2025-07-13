@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 const { createHash } = require('crypto');
 import puppeteer, { Browser, Page } from 'puppeteer';
@@ -53,17 +57,17 @@ export class PuppeteerService {
       this.configService.get('WHATSAPP_URL') || 'https://web.whatsapp.com';
   }
 
-  private async getBrowser(browserId: string): Promise<[Browser, Page]> {
+  private async getBrowser(apiKey: string): Promise<[Browser, Page]> {
     let browser: Browser;
     let page: Page;
 
-    if (this.browsers[browserId]) {
-      browser = this.browsers[browserId]?.browser;
-      page = this.browsers[browserId]?.page;
+    if (this.browsers[apiKey]) {
+      browser = this.browsers[apiKey]?.browser;
+      page = this.browsers[apiKey]?.page;
     } else {
       browser = await puppeteer.launch({
         headless: false,
-        userDataDir: `.sessions/${browserId}`,
+        userDataDir: `.sessions/${apiKey}`,
         browserURL: this.whatsAppURL,
         args: [
           '-disable-features=InfiniteSessionRestore',
@@ -72,8 +76,8 @@ export class PuppeteerService {
       });
 
       browser.on('disconnected', () => {
-        console.error(`Browser ${browserId} disconnected`);
-        delete this.browsers[browserId];
+        console.error(`Browser ${apiKey} disconnected`);
+        delete this.browsers[apiKey];
       });
 
       const pages = await browser.pages();
@@ -91,69 +95,85 @@ export class PuppeteerService {
       await waitTillHTMLRendered(page);
     }
 
-    this.browsers[browserId] = { browser, page }; // save browser to speed up future calls
+    page.setDefaultTimeout(10000);
+
+    this.browsers[apiKey] = { browser, page }; // save browser to speed up future calls
 
     return [browser, page];
   }
 
-  async getWhatsAppCode(): Promise<{ browserId: string; qrCode: string }> {
-    const browserId = getTimeHash();
-    const [browser, page] = await this.getBrowser(browserId);
+  async getWhatsAppCode(): Promise<{ apiKey: string; qrCode: string }> {
+    const apiKey = getTimeHash();
+    const [browser, page] = await this.getBrowser(apiKey);
 
     const canvas = await page.waitForSelector('canvas');
 
     const image = await canvas.screenshot({ encoding: 'base64' });
 
     return {
-      browserId,
+      apiKey,
       qrCode: 'data:image/png;base64,' + image,
     };
   }
 
   async sendWhatsAppMessage({
-    browserId,
-    phoneNumber,
+    apiKey,
+    contact,
     text,
   }: {
-    browserId: string;
-    phoneNumber: string;
+    apiKey: string;
+    contact: string;
     text: string;
   }): Promise<string> {
-    const [browser, page] = await this.getBrowser(browserId);
+    const [browser, page] = await this.getBrowser(apiKey);
 
-    const handleNoInterface = () => {
-      throw new InternalServerErrorException(
-        'Send error. Interface is not loaded',
+    const handleNeedToConnect = () => {
+      throw new HttpException(
+        'You need to connect to WhatsApp API in Admin Panel',
+        403,
       );
     };
 
-    let contactsCount = 0;
+    // Fast UI checking
+    const childNodesLength = await page.$eval(
+      'div',
+      (element) => element.childNodes[0]?.childNodes[0]?.childNodes.length,
+    );
 
-    const phoneNumberInputPSelector = 'p.selectable-text.copyable-text';
-    const phoneInputP = await page.waitForSelector(phoneNumberInputPSelector);
-
-    if (!phoneInputP) {
-      console.error('No phone input p element');
-      handleNoInterface();
+    if (childNodesLength === 3) {
+      handleNeedToConnect();
     }
 
-    // // Click on phone input
-    console.debug('Clicking on phone input');
+    // Type a phone number
+    const phoneInputP = await page.waitForSelector(
+      'div#side p.selectable-text.copyable-text',
+    );
     await phoneInputP.click();
-    await page.keyboard.type(phoneNumber, { delay: 1 });
+    await page.keyboard.type(contact, { delay: 1 });
     await page.keyboard.press('Enter', { delay: 100 });
+
+    // Check is contact exist
+    await page.waitForSelector('div#pane-side div');
+    const closeButton = await page.waitForSelector('div#side span button');
+
+    const contacts = await page.$('div#pane-side div div div');
+
+    if (!contacts) {
+      await closeButton.click(); // clean search field
+
+      throw new HttpException('Contact does not exist', 404);
+    }
+
+    // Check is message can be send
+    if (!(await page.$('footer p.selectable-text.copyable-text'))) {
+      await closeButton.click(); // clean search field
+
+      throw new HttpException('You can not to send the message to user', 405);
+    }
+
+    // Send the message
     await page.keyboard.type(`${text}${this.demoMessage}`, { delay: 1 });
     await page.keyboard.press('Enter', { delay: 100 });
-
-    const myDivs = await page.$$eval('div', (divs) =>
-      divs.map((element) => {
-        if (element.textContent === 'Continue') {
-          // element.click();
-        }
-
-        return element.textContent;
-      }),
-    );
 
     return 'Message sent';
   }
