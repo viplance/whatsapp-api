@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ApiExcludeEndpoint, ApiOperation } from '@nestjs/swagger';
+import { ApiBody, ApiExcludeEndpoint, ApiOperation } from '@nestjs/swagger';
 import { SendMessageDto } from './dto/send-message.dto';
+import { CreateWatsAppCodeDto } from './dto/create-whatsapp-code.dto';
 
 @Controller()
 export class AppController {
@@ -24,9 +25,12 @@ export class AppController {
     });
   }
 
-  @Get('/get-qr-code')
-  @ApiOperation({ summary: 'Get WhatsApp QR code' })
-  getQrCode(): Promise<{ apiKey: string; qrCode: string }> {
-    return this.appService.getWhatsAppCode();
+  @Post('/create-qr-code')
+  @ApiOperation({ summary: 'Creating WhatsApp QR code' })
+  @ApiBody({ type: CreateWatsAppCodeDto, required: false })
+  getQrCode(
+    @Body() createWatsAppCodeDto?: CreateWatsAppCodeDto,
+  ): Promise<{ apiKey: string; qrCode: string }> {
+    return this.appService.createWhatsAppCode(createWatsAppCodeDto.apiKey);
   }
 }

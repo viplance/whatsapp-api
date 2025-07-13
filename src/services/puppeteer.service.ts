@@ -62,6 +62,16 @@ export class PuppeteerService {
       this.configService.get('SESSIONS_FOLDER') || '.sessions';
   }
 
+  private checkSessionFolder(apiKey: string): void {
+    // show an error if the apiKey does not exist
+    try {
+      const fullPath = `${this.sessionsFolder}/${apiKey}`;
+      statSync(fullPath);
+    } catch (err) {
+      throw new HttpException('The apiKey does not exist', 401);
+    }
+  }
+
   private async getBrowser(
     apiKey: string,
     createNew = false,
@@ -75,12 +85,7 @@ export class PuppeteerService {
     } else {
       if (!createNew) {
         // show an error if the apiKey does not exist
-        try {
-          const fullPath = `${this.sessionsFolder}/${apiKey}`;
-          statSync(fullPath);
-        } catch (err) {
-          throw new HttpException('The apiKey does not exist', 401);
-        }
+        this.checkSessionFolder(apiKey);
       }
 
       browser = await puppeteer.launch({
@@ -120,17 +125,25 @@ export class PuppeteerService {
     return [browser, page];
   }
 
-  async getWhatsAppCode(): Promise<{ apiKey: string; qrCode: string }> {
-    const apiKey = getTimeHash(this.configService.get('SALT'));
-    const [browser, page] = await this.getBrowser(apiKey, true);
+  async createWhatsAppCode(
+    apiKey: string,
+  ): Promise<{ apiKey: string; qrCode: string }> {
+    if (apiKey) {
+      this.checkSessionFolder(apiKey);
+    }
+
+    const processedApiKey =
+      apiKey || getTimeHash(this.configService.get('SALT'));
+
+    const [browser, page] = await this.getBrowser(processedApiKey, true);
 
     const canvas = await page.waitForSelector('canvas');
 
     const image = await canvas.screenshot({ encoding: 'base64' });
 
     return {
-      apiKey,
-      qrCode: 'data:image/png;base64,' + image,
+      apiKey: processedApiKey,
+      qrCode: `data:image/png;base64,${image}`,
     };
   }
 

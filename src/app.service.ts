@@ -31,7 +31,9 @@ export class AppService {
     });
   }
 
-  async getWhatsAppCode(): Promise<{ apiKey: string; qrCode: string }> {
-    return this.puppeteerService.getWhatsAppCode();
+  async createWhatsAppCode(
+    apiKey?: string,
+  ): Promise<{ apiKey: string; qrCode: string }> {
+    return this.puppeteerService.createWhatsAppCode(apiKey);
   }
 }
