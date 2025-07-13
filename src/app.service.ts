@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { PuppeteerService } from './services/puppeteer.service';
 import { Messanger } from './types/messanger.type';
 
@@ -21,7 +21,7 @@ export class AppService {
     text: string;
   }): Promise<string> {
     if (messanger !== 'WhatsApp') {
-      throw new NotFoundException('Invalid messanger').getResponse();
+      throw new HttpException('Invalid messanger', 400);
     }
 
     return this.puppeteerService.sendWhatsAppMessage({

@@ -1,8 +1,5 @@
-import {
-  HttpException,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { statSync } from 'node:fs';
+import { HttpException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 const { createHash } = require('crypto');
 import puppeteer, { Browser, Page } from 'puppeteer';
@@ -48,18 +45,27 @@ const waitTillHTMLRendered = async (page, timeout = 30000) => {
 export class PuppeteerService {
   private demoMessage: string;
   private whatsAppURL: string;
+  private sessionsFolder: string;
   private browsers: { [key: string]: { browser: Browser; page: Page } } = {};
 
   constructor(private configService: ConfigService) {
     this.demoMessage = this.configService.get('DEMO_MESSAGE');
+
     if (this.demoMessage === undefined)
       this.demoMessage =
         ' - This message was sent using the WhatsApp Direct Message API';
+
     this.whatsAppURL =
       this.configService.get('WHATSAPP_URL') || 'https://web.whatsapp.com';
+
+    this.sessionsFolder =
+      this.configService.get('SESSIONS_FOLDER') || '.sessions';
   }
 
-  private async getBrowser(apiKey: string): Promise<[Browser, Page]> {
+  private async getBrowser(
+    apiKey: string,
+    createNew = false,
+  ): Promise<[Browser, Page]> {
     let browser: Browser;
     let page: Page;
 
@@ -67,9 +73,19 @@ export class PuppeteerService {
       browser = this.browsers[apiKey]?.browser;
       page = this.browsers[apiKey]?.page;
     } else {
+      if (!createNew) {
+        // show an error if the apiKey does not exist
+        try {
+          const fullPath = `${this.sessionsFolder}/${apiKey}`;
+          statSync(fullPath);
+        } catch (err) {
+          throw new HttpException('The apiKey does not exist', 401);
+        }
+      }
+
       browser = await puppeteer.launch({
         headless: false,
-        userDataDir: `.sessions/${apiKey}`,
+        userDataDir: `${this.sessionsFolder}/${apiKey}`,
         browserURL: this.whatsAppURL,
         args: [
           '-disable-features=InfiniteSessionRestore',
@@ -106,7 +122,7 @@ export class PuppeteerService {
 
   async getWhatsAppCode(): Promise<{ apiKey: string; qrCode: string }> {
     const apiKey = getTimeHash(this.configService.get('SALT'));
-    const [browser, page] = await this.getBrowser(apiKey);
+    const [browser, page] = await this.getBrowser(apiKey, true);
 
     const canvas = await page.waitForSelector('canvas');
 
