@@ -3,6 +3,7 @@ import { HttpException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 const { createHash } = require('crypto');
 import puppeteer, { Browser, Page } from 'puppeteer';
+import { CachedBrowser } from 'src/types/cachedBrowser.type';
 
 function delay(time) {
   return new Promise(function (resolve) {
@@ -46,7 +47,7 @@ export class PuppeteerService {
   private demoMessage: string;
   private whatsAppURL: string;
   private sessionsFolder: string;
-  private browsers: { [key: string]: { browser: Browser; page: Page } } = {};
+  private browsers: { [key: string]: CachedBrowser } = {};
 
   constructor(private configService: ConfigService) {
     this.demoMessage = this.configService.get('DEMO_MESSAGE');
@@ -75,13 +76,15 @@ export class PuppeteerService {
   private async getBrowser(
     apiKey: string,
     createNew = false,
-  ): Promise<[Browser, Page]> {
+  ): Promise<CachedBrowser> {
     let browser: Browser;
     let page: Page;
+    let isBusy = false;
 
     if (this.browsers[apiKey]) {
-      browser = this.browsers[apiKey]?.browser;
-      page = this.browsers[apiKey]?.page;
+      browser = this.browsers[apiKey].browser;
+      page = this.browsers[apiKey].page;
+      isBusy = this.browsers[apiKey].isBusy;
     } else {
       if (!createNew) {
         // show an error if the apiKey does not exist
@@ -120,9 +123,17 @@ export class PuppeteerService {
 
     page.setDefaultTimeout(10000);
 
-    this.browsers[apiKey] = { browser, page }; // save browser to speed up future calls
+    this.browsers[apiKey] = { browser, page, isBusy }; // save browser to speed up future calls
 
-    return [browser, page];
+    return { browser, page, isBusy };
+  }
+
+  private setBrowserIsBusy(apiKey: string, isBusy: boolean): void {
+    if (!this.browsers[apiKey]) {
+      throw new HttpException('The apiKey does not exist', 401);
+    }
+
+    this.browsers[apiKey].isBusy = isBusy;
   }
 
   async createWhatsAppCode(
@@ -135,7 +146,7 @@ export class PuppeteerService {
     const processedApiKey =
       apiKey || getTimeHash(this.configService.get('SALT'));
 
-    const [browser, page] = await this.getBrowser(processedApiKey, true);
+    const { page } = await this.getBrowser(processedApiKey, true);
 
     const canvas = await page.waitForSelector('canvas');
 
@@ -156,9 +167,17 @@ export class PuppeteerService {
     contact: string;
     text: string;
   }): Promise<string> {
-    const [browser, page] = await this.getBrowser(apiKey);
+    const { page, isBusy } = await this.getBrowser(apiKey);
+
+    if (isBusy) {
+      throw new HttpException('The apiKey worker is busy', 400);
+    }
+
+    this.setBrowserIsBusy(apiKey, true);
 
     const handleNeedToConnect = () => {
+      this.setBrowserIsBusy(apiKey, false);
+
       throw new HttpException(
         'You need to connect to WhatsApp API in Admin Panel',
         403,
@@ -192,6 +211,8 @@ export class PuppeteerService {
     if (!contacts) {
       await closeButton.click(); // clean search field
 
+      this.setBrowserIsBusy(apiKey, false);
+
       throw new HttpException('Contact does not exist', 404);
     }
 
@@ -199,12 +220,16 @@ export class PuppeteerService {
     if (!(await page.$('footer p.selectable-text.copyable-text'))) {
       await closeButton.click(); // clean search field
 
-      throw new HttpException('You can not to send the message to user', 405);
+      this.setBrowserIsBusy(apiKey, false);
+
+      throw new HttpException('You can`t send the message to user', 405);
     }
 
     // Send the message
     await page.keyboard.type(`${text}${this.demoMessage}`, { delay: 1 });
     await page.keyboard.press('Enter', { delay: 100 });
+
+    this.setBrowserIsBusy(apiKey, false);
 
     return 'Message sent';
   }
