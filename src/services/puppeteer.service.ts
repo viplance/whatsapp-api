@@ -1,7 +1,7 @@
-import { statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { HttpException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-const { createHash } = require('crypto');
+import { createHash } from 'crypto';
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { CachedBrowser } from 'src/types/cachedBrowser.type';
 
@@ -63,12 +63,14 @@ export class PuppeteerService {
       this.configService.get('SESSIONS_FOLDER') || '.sessions';
   }
 
-  private checkSessionFolder(apiKey: string): void {
-    // show an error if the apiKey does not exist
+  private getBrowserWSEndpoint(apiKey: string): string {
     try {
-      const fullPath = `${this.sessionsFolder}/${apiKey}`;
-      statSync(fullPath);
+      const fullPath = `${this.sessionsFolder}/${apiKey}/DevToolsActivePort`;
+      const fileContent = readFileSync(fullPath, 'utf8');
+
+      return `ws://127.0.0.1:${fileContent.replace(/(?:\r\n|\r|\n)/g, '')}`;
     } catch (err) {
+      // show an error if the apiKey does not exist
       throw new HttpException('The apiKey does not exist', 401);
     }
   }
@@ -86,20 +88,31 @@ export class PuppeteerService {
       page = this.browsers[apiKey].page;
       isBusy = this.browsers[apiKey].isBusy;
     } else {
+      let browserWSEndpoint: string;
+
       if (!createNew) {
-        // show an error if the apiKey does not exist
-        this.checkSessionFolder(apiKey);
+        browserWSEndpoint = this.getBrowserWSEndpoint(apiKey);
       }
 
-      browser = await puppeteer.launch({
-        headless: false,
-        userDataDir: `${this.sessionsFolder}/${apiKey}`,
-        browserURL: this.whatsAppURL,
-        args: [
-          '-disable-features=InfiniteSessionRestore',
-          '--hide-crash-restore-bubble',
-        ],
-      });
+      try {
+        browser = await puppeteer.launch({
+          headless: false,
+          userDataDir: `${this.sessionsFolder}/${apiKey}`,
+          browserURL: this.whatsAppURL,
+          args: [
+            '--no-sandbox',
+            '--disabled-setupid-sandbox',
+            '-disable-features=InfiniteSessionRestore',
+            '--hide-crash-restore-bubble',
+          ],
+        });
+
+        console.log('browserWSEndpoint', browser.wsEndpoint());
+      } catch (error) {
+        browser = await puppeteer.connect({
+          browserWSEndpoint,
+        });
+      }
 
       browser.on('disconnected', () => {
         console.error(`Browser ${apiKey} disconnected`);
@@ -140,7 +153,7 @@ export class PuppeteerService {
     apiKey: string,
   ): Promise<{ apiKey: string; qrCode: string }> {
     if (apiKey) {
-      this.checkSessionFolder(apiKey);
+      this.getBrowserWSEndpoint(apiKey);
     }
 
     const processedApiKey =
@@ -167,6 +180,8 @@ export class PuppeteerService {
     contact: string;
     text: string;
   }): Promise<string> {
+    const startTime = Date.now();
+
     const { page, isBusy } = await this.getBrowser(apiKey);
 
     if (isBusy) {
@@ -231,6 +246,6 @@ export class PuppeteerService {
 
     this.setBrowserIsBusy(apiKey, false);
 
-    return 'Message sent';
+    return `Message sent in ${Date.now() - startTime} ms !`;
   }
 }
