@@ -1,0 +1,42 @@
+body {
+  font-family: Verdana, sans-serif;
+  color: black;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+}
+
+header.logo {
+  float: left;
+  text-align: left;
+}
+
+h1 {
+  font-size: 40px;
+  font-weight: 400;
+}
+
+.highlight {
+  color: var(--teal);
+}
+
+.info-row {
+  display: flex;
+  justify-content: center;
+}
+
+.info-row_content {
+  max-width: 1600px;
+}
+
+@media screen and (width >= 1600px) {
+  .info-row_content {
+    min-width: 1600px;
+  }
+}
+
+.info-row__text {
+  width: 50%;
+}

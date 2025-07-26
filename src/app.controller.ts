@@ -3,16 +3,14 @@ import { AppService } from './app.service';
 import { ApiBody, ApiExcludeEndpoint, ApiOperation } from '@nestjs/swagger';
 import { SendMessageDto } from './dto/send-message.dto';
 import { CreateWatsAppCodeDto } from './dto/create-whatsapp-code.dto';
+import { AddContactDto } from './dto/add-contact.dto';
 
-@Controller()
+@Controller({
+  path: 'api',
+  version: '1',
+})
 export class AppController {
   constructor(private readonly appService: AppService) {}
-
-  @ApiExcludeEndpoint()
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
-  }
 
   @Post('/send-message')
   @ApiOperation({ summary: 'Send message' })
@@ -22,6 +20,16 @@ export class AppController {
       apiKey: sendMessageDto.apiKey,
       contact: sendMessageDto.contact,
       text: sendMessageDto.text,
+    });
+  }
+
+  @Post('/add-contact')
+  @ApiOperation({ summary: 'Add new contact' })
+  addContact(@Body() addContactDto: AddContactDto): Promise<string> {
+    return this.appService.addContact({
+      messanger: addContactDto.messanger,
+      apiKey: addContactDto.apiKey,
+      contact: addContactDto.contact,
     });
   }
 

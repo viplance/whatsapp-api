@@ -5,9 +5,6 @@ import { Messanger } from './types/messanger.type';
 @Injectable()
 export class AppService {
   constructor(private readonly puppeteerService: PuppeteerService) {}
-  getHello(): string {
-    return 'WhatsApp direct message API';
-  }
 
   async sendMessage({
     messanger,
@@ -28,6 +25,25 @@ export class AppService {
       apiKey,
       contact,
       text,
+    });
+  }
+
+  async addContact({
+    messanger,
+    apiKey,
+    contact,
+  }: {
+    messanger: Messanger;
+    apiKey: string;
+    contact: string;
+  }): Promise<string> {
+    if (messanger !== 'WhatsApp') {
+      throw new HttpException('Invalid messanger', 400);
+    }
+
+    return this.puppeteerService.addContact({
+      apiKey,
+      contact,
     });
   }
 

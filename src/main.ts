@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
+import { join } from 'path';
+import { readFileSync } from 'fs';
 
 declare const module: any;
 
@@ -10,10 +12,15 @@ async function bootstrap() {
   const configService = app.get<ConfigService>(ConfigService);
   const port = configService.get('SERVER_PORT');
 
+  const packageJsonPath = join(__dirname, '..', 'package.json');
+  const packageJsonContent = readFileSync(packageJsonPath, 'utf-8');
+  const packageJson = JSON.parse(packageJsonContent);
+  const version: string = packageJson.version;
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle('WhatsApp direct message API')
     .setDescription('Send direct messages to WhatsApp without Business account')
-    .setVersion('1.0')
+    .setVersion(version)
     .addTag('cats')
     .build();
 

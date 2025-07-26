@@ -3,7 +3,7 @@ import { HttpException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { CachedBrowser } from 'src/types/cachedBrowser.type';
+import { CachedBrowser } from 'src/types/cached-browser.type';
 
 function delay(time) {
   return new Promise(function (resolve) {
@@ -106,8 +106,6 @@ export class PuppeteerService {
             '--hide-crash-restore-bubble',
           ],
         });
-
-        console.log('browserWSEndpoint', browser.wsEndpoint());
       } catch (error) {
         browser = await puppeteer.connect({
           browserWSEndpoint,
@@ -246,6 +244,92 @@ export class PuppeteerService {
 
     this.setBrowserIsBusy(apiKey, false);
 
-    return `Message sent in ${Date.now() - startTime} ms !`;
+    return `Message sent in ${Date.now() - startTime} ms`;
+  }
+
+  async addContact({
+    apiKey,
+    contact,
+  }: {
+    apiKey: string;
+    contact: string;
+  }): Promise<string> {
+    const startTime = Date.now();
+
+    const { page, isBusy } = await this.getBrowser(apiKey);
+
+    if (isBusy) {
+      throw new HttpException('The apiKey worker is busy', 400);
+    }
+
+    this.setBrowserIsBusy(apiKey, true);
+
+    const handleNeedToConnect = () => {
+      this.setBrowserIsBusy(apiKey, false);
+
+      throw new HttpException(
+        'You need to connect to WhatsApp API in Admin Panel',
+        403,
+      );
+    };
+
+    // Fast UI checking
+    const childNodesLength = await page.$eval(
+      'div',
+      (element) => element.childNodes[0]?.childNodes[0]?.childNodes.length,
+    );
+
+    if (childNodesLength === 3) {
+      handleNeedToConnect();
+    }
+
+    // Check is contact exist
+    await page.waitForSelector('div#pane-side div');
+    const openChatButton = await page.waitForSelector('button[data-tab="2"]');
+    await openChatButton.click();
+    const newContactDiv = await page.waitForSelector(
+      'div[data-tab="3"] div:nth-of-type(3)',
+    );
+    await newContactDiv.click();
+
+    // roll back
+    // const openChatButton = await page.waitForSelector('button[data-tab="2"]');
+    // await openChatButton.click();
+
+    return null;
+    // Type a phone number
+    const phoneInputP = await page.waitForSelector(
+      'div#side p.selectable-text.copyable-text',
+    );
+    await phoneInputP.click();
+    await page.keyboard.type(contact, { delay: 1 });
+    await page.keyboard.press('Enter', { delay: 100 });
+
+    // Check is contact exist
+    await page.waitForSelector('div#pane-side div');
+    const closeButton = await page.waitForSelector('div#side span button');
+
+    const contacts = await page.$('div#pane-side div div div');
+
+    if (!contacts) {
+      await closeButton.click(); // clean search field
+
+      this.setBrowserIsBusy(apiKey, false);
+
+      throw new HttpException('Contact does not exist', 404);
+    }
+
+    // Check is message can be send
+    if (!(await page.$('footer p.selectable-text.copyable-text'))) {
+      await closeButton.click(); // clean search field
+
+      this.setBrowserIsBusy(apiKey, false);
+
+      throw new HttpException('You can`t send the message to user', 405);
+    }
+
+    this.setBrowserIsBusy(apiKey, false);
+
+    return `Contact has been added in ${Date.now() - startTime} ms`;
   }
 }
