@@ -8,11 +8,18 @@
     <link rel="stylesheet" href="styles/colors.css" />
     <link rel="stylesheet" href="styles/index.css" />
     <script defer="defer" src="scripts/watcher.js"></script>
+    <script
+      defer="defer"
+      src="scripts/common.js
+    "
+    ></script>
   </head>
   <body>
+    <div class="bubble right top big"></div>
+
     <header class="content">
       <div class="logo">
-        <img src="img/whatsapp.svg" alt="WhatsApp Direct Message API" />
+        <img src="favicon.ico" alt="WhatsApp Direct Message API" />
         <h2>WhatsApp Direct Message API</h2>
       </div>
       <nav>
@@ -29,25 +36,49 @@
       <div class="info-row content">
         <div class="info-row__text">
           <h1>
-            Get started width<br />
+            Get started with<br />
             <span class="highlight">WhatsApp<br />Direct Message API</span>
           </h1>
           <p>
-            Use your WhatsApp API to send direct messages without Business
-            account.
+            Use the WhatsApp API to send direct messages — no Business account
+            needed.
           </p>
           <button>Sign Up</button>
         </div>
+        <div class="info-row__image">
+          <img src="img/api.jpg" alt="API" />
+        </div>
       </div>
-      <div class="info-row__background right big"></div>
     </div>
 
-    <div class="info-row__background left"></div>
+    <div class="info-row">
+      <div class="info-row content">
+        <div class="info-row__image">
+          <img src="img/api.jpg" alt="API" />
+        </div>
+        <div class="info-row__text">
+          <h1>
+            Get started with<br />
+            <span class="highlight">WhatsApp<br />Direct Message API</span>
+          </h1>
+          <p>
+            Enable direct messaging via the WhatsApp API without a Business
+            account.
+          </p>
+          <button class="white">Watch Features</button>
+        </div>
+      </div>
+    </div>
 
     <footer>
-      <a aria-label="Chat on WhatsApp" href="https://wa.me/1XXXXXXXXXX"> <img alt="Chat Us on WhatsApp" src="img/whatsapp.svg" width="24px" />
-        <a />
-        Chat Us on WhatsApp
+      <a id="phone" href="https://wa.me/1234567890" target="_blank">
+        <button class="white">
+          <img alt="Chat Us on WhatsApp" src="favicon.ico" />
+          Contact us on WhatsApp
+        </button>
+      </a>
     </footer>
+
+    <div class="bubble left"></div>
   </body>
 </html>

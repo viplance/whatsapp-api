@@ -30,6 +30,7 @@ h2 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
 }
 
 @media screen and (width >= 1600px) {
@@ -73,14 +74,7 @@ nav ul li:hover {
   text-decoration: underline;
 }
 
-/* content */
-.info-row {
-  flex: 1 0 auto;
-  flex-grow: 1;
-  position: relative;
-}
-
-.info-row__background {
+.bubble {
   position: absolute;
   background-image: url('../img/bubble.svg');
   background-size: cover;
@@ -90,30 +84,41 @@ nav ul li:hover {
   bottom: 0;
 }
 
-.info-row__background.left {
+.bubble.top {
+  top: 0;
+}
+
+.bubble.left {
   left: 0;
 }
 
-.info-row__background.right {
+.bubble.right {
   right: 0;
 }
 
-.info-row__background.big {
+.bubble.big {
   width: 400px;
   height: 200px;
 }
 
-.info-row__background.small {
+.bubble.small {
   width: 200px;
   height: 100px;
 }
 
-.info-row_content {
-  max-width: 1600px;
-}
-
+/* content */
 .info-row__text {
   width: 50%;
+}
+
+.info-row__image {
+  width: 50%;
+}
+
+.info-row__image img {
+  width: 100%;
+  max-width: 30rem;
+  object-fit: contain;
 }
 
 .info-row p {
@@ -130,6 +135,10 @@ footer {
 
 /* common elements */
 button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
   background-color: var(--teal);
   border: none;
   border-radius: 0.5rem;
@@ -137,10 +146,14 @@ button {
   padding: 15px 32px;
   text-align: center;
   text-decoration: none;
-  display: inline-block;
   font-size: 1rem;
   margin: 4px 2px;
   cursor: pointer;
+}
+
+button img {
+  width: 2rem;
+  height: 2rem;
 }
 
 button:hover {
