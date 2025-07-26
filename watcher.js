@@ -12,7 +12,6 @@ const pongHandler = (data) => {
 };
 
 ws.on('connection', (connection) => {
-  console.log('UI host has been connected.');
   connection.isAlive = true;
   connection.on('error', console.error);
   connection.on('pong', pongHandler);
