@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { PuppeteerService } from './services/puppeteer.service';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { LogModule } from '@viplance/nestjs-logger';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { join } from 'path';
         redirect: true,
       },
     }),
+    LogModule,
   ],
   controllers: [AppController],
   providers: [AppService, PuppeteerService],

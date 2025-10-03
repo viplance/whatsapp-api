@@ -4,6 +4,8 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { readFileSync } from 'fs';
+import { LogInterceptor } from '@viplance/nestjs-logger';
+import { LogService } from '@viplance/nestjs-logger';
 
 declare const module: any;
 
@@ -23,6 +25,9 @@ async function bootstrap() {
     .setVersion(version)
     .addTag('cats')
     .build();
+
+  const logService = await app.resolve(LogService);
+  app.useGlobalInterceptors(new LogInterceptor(logService));
 
   const documentFactory = () =>
     SwaggerModule.createDocument(app, swaggerConfig);

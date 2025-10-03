@@ -39,6 +39,7 @@ export class AppController {
   getQrCode(
     @Body() createWatsAppCodeDto?: CreateWatsAppCodeDto,
   ): Promise<{ apiKey: string; qrCode: string }> {
+    throw new Error('Blah');
     return this.appService.createWhatsAppCode(createWatsAppCodeDto.apiKey);
   }
 }
